@@ -33,140 +33,140 @@ import ninja.leaping.configurate.objectmapping.serialize.ConfigSerializable;
 
 @ConfigSerializable
 public class aBuy extends Shop {
-    @Setting
-    private Inventory itemsTemplate;
-    @Setting
-    private Location<World> sellerChest;
-    @Setting
-    private int price;
+	@Setting
+	private Inventory itemsTemplate;
+	@Setting
+	private Location<World> sellerChest;
+	@Setting
+	private int price;
 
-    @SuppressWarnings("unused")
-    public aBuy() {
-    }
+	@SuppressWarnings("unused")
+	public aBuy() {
+	}
 
-    aBuy(Player player, Location<World> sign) throws ExceptionInInitializerError {
-        super(sign);
-        String type = "aBuy";
-        if (!player.hasPermission("carrotshop.admin.abuy"))
-            throw new ExceptionInInitializerError(Lang.SHOP_PERM.replace("%type%", type));
-        Stack<Location<World>> locations = ShopsData.getItemLocations(player);
-        if (locations.isEmpty())
-            throw new ExceptionInInitializerError(Lang.SHOP_CHEST.replace("%type%", type));
-        Optional<TileEntity> chestOpt = locations.peek().getTileEntity();
-        if (!chestOpt.isPresent() || !(chestOpt.get() instanceof TileEntityCarrier))
-            throw new ExceptionInInitializerError(Lang.SHOP_CHEST.replace("%type%", type));
-        Inventory items = ((TileEntityCarrier) chestOpt.get()).getInventory();
-        if (items.totalItems() == 0)
-            throw new ExceptionInInitializerError(Lang.SHOP_CHEST_EMPTY);
-        price = getPrice(sign);
-        if (price < 0)
-            throw new ExceptionInInitializerError(Lang.SHOP_PRICE);
-        sellerChest = locations.peek();
-        itemsTemplate = Inventory.builder().from(items).build(CarrotShop.getInstance());
-        for (Inventory item : items.slots()) {
-            if (item.peek().isPresent())
-                itemsTemplate.offer(item.peek().get());
-        }
+	aBuy(Player player, Location<World> sign) throws ExceptionInInitializerError {
+		super(sign);
+		String type = "aBuy";
+		if (!player.hasPermission("carrotshop.admin.abuy"))
+			throw new ExceptionInInitializerError(Lang.SHOP_PERM.replace("%type%", type));
+		Stack<Location<World>> locations = ShopsData.getItemLocations(player);
+		if (locations.isEmpty())
+			throw new ExceptionInInitializerError(Lang.SHOP_CHEST.replace("%type%", type));
+		Optional<TileEntity> chestOpt = locations.peek().getTileEntity();
+		if (!chestOpt.isPresent() || !(chestOpt.get() instanceof TileEntityCarrier))
+			throw new ExceptionInInitializerError(Lang.SHOP_CHEST.replace("%type%", type));
+		Inventory items = ((TileEntityCarrier) chestOpt.get()).getInventory();
+		if (items.totalItems() == 0)
+			throw new ExceptionInInitializerError(Lang.SHOP_CHEST_EMPTY);
+		price = getPrice(sign);
+		if (price < 0)
+			throw new ExceptionInInitializerError(Lang.SHOP_PRICE);
+		sellerChest = locations.peek();
+		itemsTemplate = Inventory.builder().from(items).build(CarrotShop.getInstance());
+		for (Inventory item : items.slots()) {
+			if (item.peek().isPresent())
+				itemsTemplate.offer(item.peek().get());
+		}
 
-        ShopsData.clearItemLocations(player);
-        player.sendMessage(Text.of(TextColors.DARK_GREEN, Lang.SHOP_DONE.replace("%type%", type)));
-        done(player);
-        info(player);
-    }
+		ShopsData.clearItemLocations(player);
+		player.sendMessage(Text.of(TextColors.DARK_GREEN, Lang.SHOP_DONE.replace("%type%", type)));
+		done(player);
+		info(player);
+	}
 
-    @Override
-    public List<Location<World>> getLocations() {
-        List<Location<World>> locations = super.getLocations();
-        locations.add(sellerChest);
-        return locations;
-    }
+	@Override
+	public List<Location<World>> getLocations() {
+		List<Location<World>> locations = super.getLocations();
+		locations.add(sellerChest);
+		return locations;
+	}
 
-    @Override
-    public boolean update() {
-        Optional<TileEntity> chest = sellerChest.getTileEntity();
-        if (chest.isPresent() && chest.get() instanceof TileEntityCarrier) {
-            if (hasEnough(((TileEntityCarrier) chest.get()).getInventory(), itemsTemplate)) {
-                setOK();
-                return true;
-            }
-        }
-        setFail();
-        return false;
-    }
+	@Override
+	public boolean update() {
+		Optional<TileEntity> chest = sellerChest.getTileEntity();
+		if (chest.isPresent() && chest.get() instanceof TileEntityCarrier) {
+			if (hasEnough(((TileEntityCarrier) chest.get()).getInventory(), itemsTemplate)) {
+				setOK();
+				return true;
+			}
+		}
+		setFail();
+		return false;
+	}
 
-    @Override
-    public void info(Player player) {
-        if (!update()) {
-            player.sendMessage(Text.of(TextColors.GOLD, Lang.SHOP_EMPTY));
-            return;
-        }
+	@Override
+	public void info(Player player) {
+		if (!update()) {
+			player.sendMessage(Text.of(TextColors.GOLD, Lang.SHOP_EMPTY));
+			return;
+		}
 
-        player.sendMessage(
-                Lang.build(
-                        Lang.SHOP_FORMAT_BUY,
-                        ImmutableMap.<String, Text>builder()
-                                .put("items", new InventoryDecorator(itemsTemplate).getTooltippedItemList())
-                                .put("price", Text.of(formatPrice(price)))
-                                .build()
-                )
-        );
+		player.sendMessage(
+				Lang.build(
+						Lang.SHOP_FORMAT_BUY,
+						ImmutableMap.<String, Text>builder()
+								.put("items", new InventoryDecorator(itemsTemplate).getTooltippedItemList())
+								.put("price", Text.of(formatPrice(price)))
+								.build()
+				)
+		);
 
-    }
+	}
 
-    @Override
-    public boolean trigger(Player player) {
-        Optional<TileEntity> chestToGive = sellerChest.getTileEntity();
-        if (chestToGive.isPresent() && chestToGive.get() instanceof TileEntityCarrier) {
-            if (!hasEnough(((TileEntityCarrier) chestToGive.get()).getInventory(), itemsTemplate)) {
-                player.sendMessage(Text.of(TextColors.GOLD, Lang.SHOP_EMPTY));
-                update();
-                return false;
-            }
-        } else {
-            return false;
-        }
-        UniqueAccount buyerAccount = CarrotShop.getEcoService().getOrCreateAccount(player.getUniqueId()).get();
-        TransactionResult accountResult = buyerAccount.withdraw(getCurrency(), BigDecimal.valueOf(price), CarrotShop.getCause());
-        if (accountResult.getResult() != ResultType.SUCCESS) {
-            player.sendMessage(Text.of(TextColors.DARK_RED, Lang.SHOP_MONEY));
-            return false;
-        }
-        Inventory inv = player.getInventory().query(QueryOperationTypes.INVENTORY_TYPE.of(InventoryRow.class));
+	@Override
+	public boolean trigger(Player player) {
+		Optional<TileEntity> chestToGive = sellerChest.getTileEntity();
+		if (chestToGive.isPresent() && chestToGive.get() instanceof TileEntityCarrier) {
+			if (!hasEnough(((TileEntityCarrier) chestToGive.get()).getInventory(), itemsTemplate)) {
+				player.sendMessage(Text.of(TextColors.GOLD, Lang.SHOP_EMPTY));
+				update();
+				return false;
+			}
+		} else {
+			return false;
+		}
+		UniqueAccount buyerAccount = CarrotShop.getEcoService().getOrCreateAccount(player.getUniqueId()).get();
+		TransactionResult accountResult = buyerAccount.withdraw(getCurrency(), BigDecimal.valueOf(price), CarrotShop.getCause());
+		if (accountResult.getResult() != ResultType.SUCCESS) {
+			player.sendMessage(Text.of(TextColors.DARK_RED, Lang.SHOP_MONEY));
+			return false;
+		}
+		Inventory inv = player.getInventory().query(QueryOperationTypes.INVENTORY_TYPE.of(InventoryRow.class));
 
-        Inventory invToGive = ((TileEntityCarrier) chestToGive.get()).getInventory();
+		Inventory invToGive = ((TileEntityCarrier) chestToGive.get()).getInventory();
 
-        for (Inventory item : itemsTemplate.slots()) {
-            if (item.peek().isPresent()) {
-                Optional<ItemStack> template = getTemplate(invToGive, item.peek().get());
-                if (template.isPresent()) {
-                    ItemStackDecorator neededStack = new ItemStackDecorator(item.peek().get().copy());
-                    Optional<ItemStack> items = invToGive.query(
-                            QueryOperationTypes.ITEM_STACK_CUSTOM.of(neededStack::exactItemMatch)
-                    ).poll(neededStack.getQuantity());
+		for (Inventory item : itemsTemplate.slots()) {
+			if (item.peek().isPresent()) {
+				Optional<ItemStack> template = getTemplate(invToGive, item.peek().get());
+				if (template.isPresent()) {
+					ItemStackDecorator neededStack = new ItemStackDecorator(item.peek().get().copy());
+					Optional<ItemStack> items = invToGive.query(
+							QueryOperationTypes.ITEM_STACK_CUSTOM.of(neededStack::exactItemMatch)
+					).poll(neededStack.getQuantity());
 
-                    if (items.isPresent()) {
-                        inv.offer(items.get()).getRejectedItems().forEach(action -> putItemInWorld(action, player.getLocation()));
-                    } else {
-                        return false;
-                    }
-                }
-            }
-        }
+					if (items.isPresent()) {
+						inv.offer(items.get()).getRejectedItems().forEach(action -> putItemInWorld(action, player.getLocation()));
+					} else {
+						return false;
+					}
+				}
+			}
+		}
 
-        ShopsLogs.log(getOwner(), player, "buy", super.getLocation(), Optional.of(price), getRawCurrency(), Optional.of(itemsTemplate), Optional.empty());
+		ShopsLogs.log(getOwner(), player, "buy", super.getLocation(), Optional.of(price), getRawCurrency(), Optional.of(itemsTemplate), Optional.empty());
 
-        player.sendMessage(
-                Lang.build(
-                        Lang.SHOP_RECAP_BUY,
-                        ImmutableMap.<String, Text>builder()
-                                .put("items", new InventoryDecorator(itemsTemplate).getTooltippedItemList())
-                                .put("price", Text.of(formatPrice(price)))
-                                .build()
-                )
-        );
+		player.sendMessage(
+				Lang.build(
+						Lang.SHOP_RECAP_BUY,
+						ImmutableMap.<String, Text>builder()
+								.put("items", new InventoryDecorator(itemsTemplate).getTooltippedItemList())
+								.put("price", Text.of(formatPrice(price)))
+								.build()
+				)
+		);
 
-        update();
-        return true;
-    }
+		update();
+		return true;
+	}
 
 }

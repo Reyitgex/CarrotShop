@@ -35,172 +35,172 @@ import java.util.UUID;
 @ConfigSerializable
 public abstract class Shop {
 
-    @Setting
-    private UUID owner = null;
-    @Setting
-    private Location<World> location = null;
-    @Setting
-    private Currency currency = null;
+	@Setting
+	private UUID owner = null;
+	@Setting
+	private Location<World> location = null;
+	@Setting
+	private Currency currency = null;
 
-    @SuppressWarnings("unused")
-    public Shop() {
-    }
+	@SuppressWarnings("unused")
+	public Shop() {
+	}
 
-    public Shop(Location<World> loc) {
-        Optional<TileEntity> tile = loc.getTileEntity();
-        if (!tile.isPresent() || !tile.get().supports(SignData.class))
-            throw new ExceptionInInitializerError("Improbable error: managed to trigger a shop creation event from something other than a sign");
-        location = loc;
-    }
+	public Shop(Location<World> loc) {
+		Optional<TileEntity> tile = loc.getTileEntity();
+		if (!tile.isPresent() || !tile.get().supports(SignData.class))
+			throw new ExceptionInInitializerError("Improbable error: managed to trigger a shop creation event from something other than a sign");
+		location = loc;
+	}
 
-    public abstract void info(Player player);
+	public abstract void info(Player player);
 
-    public abstract boolean trigger(Player player);
+	public abstract boolean trigger(Player player);
 
-    public final void done(Player player) {
-        if (canLoopCurrency(player)) {
-            player.sendMessage(Text.of(TextColors.GOLD, Lang.SHOP_CURRENCY.replace("%name%", getCurrency().getDisplayName().toPlain())));
-            player.sendMessage(Text.of(TextColors.GOLD, Lang.SHOP_CURRENCY_LOOP));
-        }
-    }
+	public final void done(Player player) {
+		if (canLoopCurrency(player)) {
+			player.sendMessage(Text.of(TextColors.GOLD, Lang.SHOP_CURRENCY.replace("%name%", getCurrency().getDisplayName().toPlain())));
+			player.sendMessage(Text.of(TextColors.GOLD, Lang.SHOP_CURRENCY_LOOP));
+		}
+	}
 
-    public boolean update() {
-        setOK();
-        return true;
-    }
+	public boolean update() {
+		setOK();
+		return true;
+	}
 
-    public final boolean destroy(Player player) {
-        if (isOwner(player)) {
-            setReset();
-            ShopsData.delShop(this);
-            return true;
-        }
-        return false;
-    }
+	public final boolean destroy(Player player) {
+		if (isOwner(player)) {
+			setReset();
+			ShopsData.delShop(this);
+			return true;
+		}
+		return false;
+	}
 
-    public Location<World> getLocation() {
-        return location;
-    }
+	public Location<World> getLocation() {
+		return location;
+	}
 
-    public List<Location<World>> getLocations() {
-        List<Location<World>> locations = new ArrayList<>();
-        locations.add(location);
-        return locations;
-    }
+	public List<Location<World>> getLocations() {
+		List<Location<World>> locations = new ArrayList<>();
+		locations.add(location);
+		return locations;
+	}
 
-    public boolean canLoopCurrency(Player player) {
-        return ShopsData.hasMultipleCurrencies() && isOwner(player) && player.hasPermission("carrotshop.setup.currency");
-    }
+	public boolean canLoopCurrency(Player player) {
+		return ShopsData.hasMultipleCurrencies() && isOwner(player) && player.hasPermission("carrotshop.setup.currency");
+	}
 
-    protected final void setOwner(Player player) {
-        owner = player.getUniqueId();
-    }
+	protected final void setOwner(Player player) {
+		owner = player.getUniqueId();
+	}
 
-    protected final UUID getOwner() {
-        return owner;
-    }
+	protected final UUID getOwner() {
+		return owner;
+	}
 
-    protected final boolean isOwner(Player player) {
-        if (owner != null) {
-            if (owner.equals(player.getUniqueId()))
-                return true;
-        }
-        return player.hasPermission("carrotshop.admin.override");
-    }
+	protected final boolean isOwner(Player player) {
+		if (owner != null) {
+			if (owner.equals(player.getUniqueId()))
+				return true;
+		}
+		return player.hasPermission("carrotshop.admin.override");
+	}
 
-    protected final void setOK() {
-        setFirstLineColor(TextColors.DARK_BLUE);
-    }
+	protected final void setOK() {
+		setFirstLineColor(TextColors.DARK_BLUE);
+	}
 
-    protected final void setFail() {
-        setFirstLineColor(TextColors.RED);
-    }
+	protected final void setFail() {
+		setFirstLineColor(TextColors.RED);
+	}
 
-    public final void setReset() {
-        setFirstLineColor(TextColors.RESET);
-    }
+	public final void setReset() {
+		setFirstLineColor(TextColors.RESET);
+	}
 
-    public final Currency getCurrency() {
-        if (hasCurrency())
-            return currency;
-        return ShopsData.getCurrency();
-    }
+	public final Currency getCurrency() {
+		if (hasCurrency())
+			return currency;
+		return ShopsData.getCurrency();
+	}
 
-    protected final Optional<Currency> getRawCurrency() {
-        if (hasCurrency())
-            return Optional.of(currency);
-        return Optional.empty();
-    }
+	protected final Optional<Currency> getRawCurrency() {
+		if (hasCurrency())
+			return Optional.of(currency);
+		return Optional.empty();
+	}
 
-    public boolean hasCurrency() {
-        return ShopsData.hasMultipleCurrencies() && currency != null;
-    }
+	public boolean hasCurrency() {
+		return ShopsData.hasMultipleCurrencies() && currency != null;
+	}
 
-    public final void loopCurrency() {
-        if (!ShopsData.hasMultipleCurrencies())
-            return;
+	public final void loopCurrency() {
+		if (!ShopsData.hasMultipleCurrencies())
+			return;
 
-        if (ShopsData.getCurrency().equals(currency)) {
-            currency = null;
-            return;
-        }
+		if (ShopsData.getCurrency().equals(currency)) {
+			currency = null;
+			return;
+		}
 
-        boolean takeNext = false;
-        Currency first = null;
+		boolean takeNext = false;
+		Currency first = null;
 
-        if (currency == null)
-            currency = ShopsData.getCurrency();
+		if (currency == null)
+			currency = ShopsData.getCurrency();
 
-        for (Currency cur : CarrotShop.getEcoService().getCurrencies()) {
-            if (first == null)
-                first = cur;
-            if (takeNext) {
-                currency = cur;
-                return;
-            }
-            if (cur.equals(currency))
-                takeNext = true;
-        }
-        currency = first;
-    }
+		for (Currency cur : CarrotShop.getEcoService().getCurrencies()) {
+			if (first == null)
+				first = cur;
+			if (takeNext) {
+				currency = cur;
+				return;
+			}
+			if (cur.equals(currency))
+				takeNext = true;
+		}
+		currency = first;
+	}
 
-    protected final String formatPrice(int value) {
-        return formatPrice(BigDecimal.valueOf(value));
-    }
+	protected final String formatPrice(int value) {
+		return formatPrice(BigDecimal.valueOf(value));
+	}
 
-    protected final String formatPrice(BigDecimal value) {
-        String str;
-        if (value == BigDecimal.ZERO)
-            str = Lang.PRICE_ZERO;
-        else if (value == BigDecimal.ONE)
-            str = Lang.PRICE_ONE;
-        else
-            str = Lang.PRICE_DEFAULT;
-        return str
-                .replace("%value%", value.toString())
-                .replace("%currencyFull%", getCurrency().getDisplayName().toPlain())
-                .replace("%currencyFullPlural%", getCurrency().getPluralDisplayName().toPlain())
-                .replace("%currencySymbol%", getCurrency().getSymbol().toPlain());
-    }
+	protected final String formatPrice(BigDecimal value) {
+		String str;
+		if (value == BigDecimal.ZERO)
+			str = Lang.PRICE_ZERO;
+		else if (value == BigDecimal.ONE)
+			str = Lang.PRICE_ONE;
+		else
+			str = Lang.PRICE_DEFAULT;
+		return str
+				.replace("%value%", value.toString())
+				.replace("%currencyFull%", getCurrency().getDisplayName().toPlain())
+				.replace("%currencyFullPlural%", getCurrency().getPluralDisplayName().toPlain())
+				.replace("%currencySymbol%", getCurrency().getSymbol().toPlain());
+	}
 
-    private final void setFirstLineColor(TextColor color) {
-        Optional<TileEntity> sign = location.getTileEntity();
-        if (sign.isPresent() && sign.get().supports(SignData.class)) {
-            Optional<SignData> data = sign.get().getOrCreate(SignData.class);
-            if (data.isPresent()) {
-                SignData signData = data.get();
-                signData.set(signData.lines().set(0, Text.of(color, signData.lines().get(0).toPlain())));
-                sign.get().offer(signData);
-            }
-        }
-    }
+	private final void setFirstLineColor(TextColor color) {
+		Optional<TileEntity> sign = location.getTileEntity();
+		if (sign.isPresent() && sign.get().supports(SignData.class)) {
+			Optional<SignData> data = sign.get().getOrCreate(SignData.class);
+			if (data.isPresent()) {
+				SignData signData = data.get();
+				signData.set(signData.lines().set(0, Text.of(color, signData.lines().get(0).toPlain())));
+				sign.get().offer(signData);
+			}
+		}
+	}
 
-    static public void putItemInWorld(ItemStackSnapshot itemStackSnapshop, Location<World> spawnLocation) {
-        Extent extent = spawnLocation.getExtent();
-        Entity item = extent.createEntity(EntityTypes.ITEM, spawnLocation.getPosition());
-        item.offer(Keys.REPRESENTED_ITEM, itemStackSnapshop);
-        extent.spawnEntity(item);
-    }
+	static public void putItemInWorld(ItemStackSnapshot itemStackSnapshop, Location<World> spawnLocation) {
+		Extent extent = spawnLocation.getExtent();
+		Entity item = extent.createEntity(EntityTypes.ITEM, spawnLocation.getPosition());
+		item.offer(Keys.REPRESENTED_ITEM, itemStackSnapshop);
+		extent.spawnEntity(item);
+	}
 
 	static protected final int getPrice(Location<World> location) {
 		Optional<TileEntity> sign = location.getTileEntity();
@@ -216,33 +216,33 @@ public abstract class Shop {
 		return -1;
 	}
 
-    static boolean hasEnough(Inventory inventory, Inventory needs) {
-        for (Inventory item : needs.slots()) {
-            if (item.peek().isPresent()) {
-                Optional<ItemStack> template = getTemplate(inventory, item.peek().get());
+	static boolean hasEnough(Inventory inventory, Inventory needs) {
+		for (Inventory item : needs.slots()) {
+			if (item.peek().isPresent()) {
+				Optional<ItemStack> template = getTemplate(inventory, item.peek().get());
 
-                if (!template.isPresent())
-                    return false;
+				if (!template.isPresent())
+					return false;
 
-                // copy the stack, so we can change quantity to match the inventory stack
-                ItemStackDecorator neededStack = new ItemStackDecorator(item.peek().get().copy());
+				// copy the stack, so we can change quantity to match the inventory stack
+				ItemStackDecorator neededStack = new ItemStackDecorator(item.peek().get().copy());
 
-                // check how many of the item we have in the inventory
-                int inventoryItemCount = inventory.query(
-                        QueryOperationTypes.ITEM_STACK_CUSTOM.of(neededStack::exactItemMatch)
-                ).totalItems();
+				// check how many of the item we have in the inventory
+				int inventoryItemCount = inventory.query(
+						QueryOperationTypes.ITEM_STACK_CUSTOM.of(neededStack::exactItemMatch)
+				).totalItems();
 
-                // check how many of the item we need
-                int needsItemCount = needs.query(
-                        QueryOperationTypes.ITEM_STACK_CUSTOM.of(neededStack::exactItemMatch)
-                ).totalItems();
+				// check how many of the item we need
+				int needsItemCount = needs.query(
+						QueryOperationTypes.ITEM_STACK_CUSTOM.of(neededStack::exactItemMatch)
+				).totalItems();
 
-                if (inventoryItemCount < needsItemCount)
-                    return false;
-            }
-        }
-        return true;
-    }
+				if (inventoryItemCount < needsItemCount)
+					return false;
+			}
+		}
+		return true;
+	}
 
 	static private boolean equalTo(ItemStack item, ItemStack needle) {
 		if (item.equalTo(needle))
@@ -283,103 +283,103 @@ public abstract class Shop {
 				Shop shop;
 				try {
 					switch (signData.lines().get(0).toPlain().toLowerCase()) {
-					case "[itrade]":
-						shop = new iTrade(player, target);
-						break;
-					case "[ibuy]":
-						if (CarrotShop.getEcoService() == null)
+						case "[itrade]":
+							shop = new iTrade(player, target);
+							break;
+						case "[ibuy]":
+							if (CarrotShop.getEcoService() == null)
+								return false;
+							shop = new iBuy(player, target);
+							break;
+						case "[isell]":
+							if (CarrotShop.getEcoService() == null)
+								return false;
+							shop = new iSell(player, target);
+							break;
+						case "[atrade]":
+							shop = new aTrade(player, target);
+							break;
+						case "[abuy]":
+							if (CarrotShop.getEcoService() == null)
+								return false;
+							shop = new aBuy(player, target);
+							break;
+						case "[asell]":
+							if (CarrotShop.getEcoService() == null)
+								return false;
+							shop = new aSell(player, target);
+							break;
+						case "[trade]":
+							shop = new Trade(player, target);
+							break;
+						case "[buy]":
+							if (CarrotShop.getEcoService() == null)
+								return false;
+							shop = new Buy(player, target);
+							break;
+						case "[sell]":
+							if (CarrotShop.getEcoService() == null)
+								return false;
+							shop = new Sell(player, target);
+							break;
+						case "[bank]":
+							if (CarrotShop.getEcoService() == null)
+								return false;
+							shop = new Bank(player, target);
+							break;
+						case "[heal]":
+							shop = new Heal(player, target);
+							break;
+						case "[deviceon]":
+							shop = new DeviceOn(player, target);
+							break;
+						case "[deviceoff]":
+							shop = new DeviceOff(player, target);
+							break;
+						case "[toggle]":
+							shop = new Toggle(player, target);
+							break;
+						case "[adeviceon]":
+							shop = new aDeviceOn(player, target);
+							break;
+						case "[adeviceoff]":
+							shop = new aDeviceOff(player, target);
+							break;
+						case "[atoggle]":
+							shop = new aToggle(player, target);
+							break;
+						default:
 							return false;
-						shop = new iBuy(player, target);
-						break;
-					case "[isell]":
-						if (CarrotShop.getEcoService() == null)
-							return false;
-						shop = new iSell(player, target);
-						break;
-					case "[atrade]":
-						shop = new aTrade(player, target);
-						break;
-					case "[abuy]":
-						if (CarrotShop.getEcoService() == null)
-							return false;
-						shop = new aBuy(player, target);
-						break;
-					case "[asell]":
-						if (CarrotShop.getEcoService() == null)
-							return false;
-						shop = new aSell(player, target);
-						break;
-					case "[trade]":
-						shop = new Trade(player, target);
-						break;
-					case "[buy]":
-						if (CarrotShop.getEcoService() == null)
-							return false;
-						shop = new Buy(player, target);
-						break;
-					case "[sell]":
-						if (CarrotShop.getEcoService() == null)
-							return false;
-						shop = new Sell(player, target);
-						break;
-					case "[bank]":
-						if (CarrotShop.getEcoService() == null)
-							return false;
-						shop = new Bank(player, target);
-						break;
-					case "[heal]":
-						shop = new Heal(player, target);
-						break;
-					case "[deviceon]":
-						shop = new DeviceOn(player, target);
-						break;
-					case "[deviceoff]":
-						shop = new DeviceOff(player, target);
-						break;
-					case "[toggle]":
-						shop = new Toggle(player, target);
-						break;
-					case "[adeviceon]":
-						shop = new aDeviceOn(player, target);
-						break;
-					case "[adeviceoff]":
-						shop = new aDeviceOff(player, target);
-						break;
-					case "[atoggle]":
-						shop = new aToggle(player, target);
-						break;
-					default:
-						return false;
 					}
 				} catch (ExceptionInInitializerError e) {
 					player.sendMessage(Text.of(TextColors.DARK_RED, e.getMessage()));
 					return false;
 				}
 
-                for (Location<World> loc : shop.getLocations()) {
-                    Optional<List<Shop>> oldShopList = ShopsData.getShops(loc);
-                    if (oldShopList.isPresent()) {
-                        for (Shop oldShop : oldShopList.get()) {
-                            if (!oldShop.isOwner(player)) {
-                                player.sendMessage(Text.of(TextColors.DARK_RED, Lang.SHOP_OVERRIDE));
-                                return false;
-                            }
-                        }
-                    }
-                }
+				for (Location<World> loc : shop.getLocations()) {
+					Optional<List<Shop>> oldShopList = ShopsData.getShops(loc);
+					if (oldShopList.isPresent()) {
+						for (Shop oldShop : oldShopList.get()) {
+							if (!oldShop.isOwner(player)) {
+								player.sendMessage(Text.of(TextColors.DARK_RED, Lang.SHOP_OVERRIDE));
+								return false;
+							}
+						}
+					}
+				}
 
-                Optional<List<Shop>> oldShopList = ShopsData.getShops(shop.getLocation());
-                if (oldShopList.isPresent()) {
-                    List<Shop> toDelete = new ArrayList<>(oldShopList.get());
-                    toDelete.forEach((oldShop) -> {
-                        oldShop.destroy(player);
-                    });
-                }
-                ShopsData.addShop(shop);
-                return true;
-            }
-        }
-        return false;
-    }
+				Optional<List<Shop>> oldShopList = ShopsData.getShops(shop.getLocation());
+				if (oldShopList.isPresent()) {
+					List<Shop> toDelete = new ArrayList<>(oldShopList.get());
+					toDelete.forEach((oldShop) -> {
+						oldShop.destroy(player);
+					});
+				}
+				ShopsData.addShop(shop);
+				return true;
+			}
+		}
+		return false;
+	}
 
 }
